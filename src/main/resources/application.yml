@@ -1,0 +1,51 @@
+spring:
+  application:
+    name: OpsAgent
+  ai:
+    dashscope:
+      api-key: ${DASHSCOPE_API_KEY} # 读取环境变量
+      chat:
+        options:
+          model: qwen-plus
+          temperature: 0.7
+          max-tokens: 2000
+          top-p: 0.9
+
+server:
+  port: 9900
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+agent:
+  # 当前对话模型。后续可以通过环境变量 DASHSCOPE_MODEL 切换模型。
+  model: ${DASHSCOPE_MODEL:qwen-plus}
+  # Agent 的基础系统提示词。复杂提示词建议后续单独拆成 prompt 文件或配置类。
+  system-prompt: ${AGENT_SYSTEM_PROMPT:You are a concise and practical assistant.}
+  conversation:
+    # 每个会话最多保留多少轮历史。一轮包含 1 条用户消息和 1 条助手回复。
+    max-message-pairs: 6
+  terminal:
+    workspace-root: .
+    timeout-seconds: 5
+    max-output-chars: 8000
+  ops:
+    command-timeout-seconds: 5
+    max-log-lines: 200
+    services:
+      ops-agent:
+        systemd-name: ops-agent
+        health-url: http://localhost:9900/actuator/health
+        log-path: ./logs/app.log
+        version-file: ./VERSION
+        working-directory: .
+
+milvus:
+  host: localhost
+  port: 19530
+  username: ""
+  password: ""
+  database: default
+  timeout: 10000

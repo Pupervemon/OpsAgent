@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MyAgentDemo</title>
+	<style>
+		:root {
+			color-scheme: light;
+			--bg: #f7f8fa;
+			--panel: #ffffff;
+			--text: #1b1f24;
+			--muted: #697386;
+			--line: #d9dee7;
+			--accent: #1677ff;
+			--accent-dark: #0958d9;
+			--assistant: #eef3f8;
+			--user: #e7f0ff;
+			font-family: Inter, "Segoe UI", Arial, sans-serif;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			background: var(--bg);
+			color: var(--text);
+			min-height: 100vh;
+		}
+
+		.app {
+			min-height: 100vh;
+			display: grid;
+			grid-template-rows: auto 1fr auto;
+		}
+
+		header {
+			height: 56px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 0 24px;
+			border-bottom: 1px solid var(--line);
+			background: var(--panel);
+		}
+
+		.brand {
+			font-weight: 700;
+			font-size: 18px;
+		}
+
+		.status {
+			color: var(--muted);
+			font-size: 13px;
+		}
+
+		main {
+			width: min(980px, 100%);
+			margin: 0 auto;
+			padding: 24px;
+			overflow: auto;
+		}
+
+		.messages {
+			display: flex;
+			flex-direction: column;
+			gap: 14px;
+		}
+
+		.message {
+			max-width: 78%;
+			padding: 12px 14px;
+			border-radius: 8px;
+			line-height: 1.65;
+			white-space: pre-wrap;
+			word-break: break-word;
+			border: 1px solid var(--line);
+		}
+
+		.message.user {
+			align-self: flex-end;
+			background: var(--user);
+		}
+
+		.message.assistant {
+			align-self: flex-start;
+			background: var(--assistant);
+		}
+
+		.composer {
+			border-top: 1px solid var(--line);
+			background: var(--panel);
+			padding: 16px 24px;
+		}
+
+		form {
+			width: min(980px, 100%);
+			margin: 0 auto;
+			display: grid;
+			grid-template-columns: 1fr auto;
+			gap: 12px;
+			align-items: end;
+		}
+
+		textarea {
+			width: 100%;
+			min-height: 52px;
+			max-height: 180px;
+			resize: vertical;
+			border: 1px solid var(--line);
+			border-radius: 8px;
+			padding: 12px 14px;
+			font: inherit;
+			line-height: 1.5;
+			background: #fff;
+			color: var(--text);
+		}
+
+		button {
+			height: 52px;
+			min-width: 88px;
+			border: 0;
+			border-radius: 8px;
+			background: var(--accent);
+			color: #fff;
+			font: inherit;
+			font-weight: 700;
+			cursor: pointer;
+		}
+
+		button:hover {
+			background: var(--accent-dark);
+		}
+
+		button:disabled {
+			background: #a9b5c5;
+			cursor: not-allowed;
+		}
+
+		@media (max-width: 640px) {
+			header {
+				padding: 0 16px;
+			}
+
+			main {
+				padding: 16px;
+			}
+
+			.message {
+				max-width: 92%;
+			}
+
+			.composer {
+				padding: 12px 16px;
+			}
+
+			form {
+				grid-template-columns: 1fr;
+			}
+
+			button {
+				width: 100%;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="app">
+		<header>
+			<div class="brand">MyAgentDemo</div>
+			<div class="status" id="status">Ready</div>
+		</header>
+		<main>
+			<div class="messages" id="messages"></div>
+		</main>
+		<div class="composer">
+			<form id="chatForm">
+				<textarea id="messageInput" placeholder="Type a message" autocomplete="off"></textarea>
+				<button id="sendButton" type="submit">Send</button>
+			</form>
+		</div>
+	</div>
+
+	<script>
+		const form = document.getElementById('chatForm');
+		const input = document.getElementById('messageInput');
+		const messages = document.getElementById('messages');
+		const button = document.getElementById('sendButton');
+		const statusEl = document.getElementById('status');
+		let sessionId = localStorage.getItem('sessionId') || '';
+
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			const text = input.value.trim();
+			if (!text || button.disabled) {
+				return;
+			}
+
+			appendMessage('user', text);
+			input.value = '';
+			button.disabled = true;
+			statusEl.textContent = 'Streaming';
+			const assistant = appendMessage('assistant', '');
+
+			try {
+				await streamChat(text, assistant);
+				statusEl.textContent = 'Ready';
+			}
+			catch (error) {
+				assistant.textContent = error.message;
+				statusEl.textContent = 'Error';
+			}
+			finally {
+				button.disabled = false;
+				input.focus();
+			}
+		});
+
+		input.addEventListener('keydown', (event) => {
+			if (event.key === 'Enter' && !event.shiftKey) {
+				event.preventDefault();
+				form.requestSubmit();
+			}
+		});
+
+		function appendMessage(role, content) {
+			const item = document.createElement('div');
+			item.className = `message ${role}`;
+			item.textContent = content;
+			messages.appendChild(item);
+			item.scrollIntoView({ block: 'end' });
+			return item;
+		}
+
+		async function streamChat(question, assistantEl) {
+			const response = await fetch('http://localhost:9900/api/chat_stream', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ Id: sessionId, Question: question })
+			});
+
+			if (!response.ok || !response.body) {
+				throw new Error(`HTTP ${response.status}`);
+			}
+
+			const reader = response.body.getReader();
+			const decoder = new TextDecoder();
+			let buffer = '';
+
+			while (true) {
+				const { value, done } = await reader.read();
+				if (done) {
+					break;
+				}
+				buffer += decoder.decode(value, { stream: true });
+				const blocks = buffer.split(/\r?\n\r?\n/);
+				buffer = blocks.pop() || '';
+				for (const block of blocks) {
+					handleSseBlock(block, assistantEl);
+				}
+			}
+			if (buffer.trim()) {
+				handleSseBlock(buffer, assistantEl);
+			}
+		}
+
+		function handleSseBlock(block, assistantEl) {
+			const dataLines = [];
+			for (const line of block.split(/\r?\n/)) {
+				if (line.startsWith('data:')) {
+					dataLines.push(line.slice(5).trimStart());
+				}
+			}
+			if (dataLines.length === 0) {
+				return;
+			}
+
+			const payload = JSON.parse(dataLines.join('\n'));
+			if (payload.sessionId) {
+				sessionId = payload.sessionId;
+				localStorage.setItem('sessionId', sessionId);
+			}
+			if (payload.type === 'content') {
+				assistantEl.textContent += payload.data || '';
+				assistantEl.scrollIntoView({ block: 'end' });
+			}
+			if (payload.type === 'error') {
+				throw new Error(payload.data || 'Stream failed');
+			}
+		}
+	</script>
+</body>
+</html>

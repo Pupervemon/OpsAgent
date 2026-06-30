@@ -29,8 +29,10 @@ class OpsCommandRunner {
      */
     CommandResult run(List<String> command, File directory) {
         try {
+            // ProcessBuilder 接收命令数组，不接收完整 shell 字符串，避免模型拼出管道、重定向等 shell 语法。
             ProcessBuilder builder = new ProcessBuilder(command);
             if (directory != null) {
+                // 工作目录来自服务白名单配置，不由用户或模型临时指定。
                 builder.directory(directory);
             }
             builder.redirectErrorStream(true);
@@ -39,14 +41,17 @@ class OpsCommandRunner {
             int timeout = Math.max(properties.getCommandTimeoutSeconds(), 1);
             boolean finished = process.waitFor(timeout, TimeUnit.SECONDS);
             if (!finished) {
+                // 超时直接终止进程，避免工具调用卡住 SSE 流式请求。
                 process.destroyForcibly();
                 return CommandResult.unavailable("Command timed out after " + timeout + " seconds");
             }
 
+            // redirectErrorStream(true) 已经把 stderr 合并到 stdout，这里统一读取给 Agent 分析。
             String output = new String(process.getInputStream().readAllBytes(), StandardCharsets.UTF_8).trim();
             return new CommandResult(true, process.exitValue(), output, null);
         }
         catch (IOException ex) {
+            // 常见情况：服务器没有安装 systemctl/git，或当前应用用户没有执行权限。
             return CommandResult.unavailable("Command is unavailable or not installed: " + command.get(0));
         }
         catch (InterruptedException ex) {
@@ -60,6 +65,7 @@ class OpsCommandRunner {
 
     record CommandResult(boolean available, int exitCode, String output, String error) {
 
+        // available=false 表示命令本身无法运行；exitCode 非 0 则表示命令运行了但结果失败。
         static CommandResult unavailable(String error) {
             return new CommandResult(false, -1, "", error);
         }
@@ -69,3 +75,4 @@ class OpsCommandRunner {
         }
     }
 }
+

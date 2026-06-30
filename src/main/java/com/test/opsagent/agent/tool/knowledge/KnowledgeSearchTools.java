@@ -37,9 +37,12 @@ public class KnowledgeSearchTools {
             return OpsJson.stringify(OpsToolResult.failed("searchOperationsKnowledge", "Query is required"));
         }
 
+        // topK 做默认值和上限保护，避免一次取回太多知识片段。
         int limit = topK <= 0 ? 3 : Math.min(topK, 10);
         try {
+            // 真正的向量检索委托给现有 VectorSearchService；这里不关心 Milvus 细节。
             List<VectorSearchService.SearchResult> results = vectorSearchService.searchSimilarDocuments(query, limit);
+            // 将检索结果整理成模型更容易理解的结构化字段。
             List<Map<String, Object>> data = results.stream()
                     .map(result -> {
                         Map<String, Object> item = new LinkedHashMap<>();
@@ -57,6 +60,7 @@ public class KnowledgeSearchTools {
                             : "Found matching operations knowledge documents.",
                     data));
         }
+        // Milvus、Embedding、索引或网络不可用都在这里统一转成 unavailable。
         catch (Exception ex) {
             return OpsJson.stringify(OpsToolResult.unavailable("searchOperationsKnowledge",
                     "Knowledge search failed or vector dependencies are unavailable: " + ex.getMessage()));

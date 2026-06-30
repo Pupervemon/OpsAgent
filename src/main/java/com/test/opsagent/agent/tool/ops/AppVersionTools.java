@@ -46,6 +46,7 @@ public class AppVersionTools {
 
         // 非 git 部署时，建议由发布流程写入 VERSION 文件。
         if (service.getVersionFile() != null && !service.getVersionFile().isBlank()) {
+            // versionFile 适合制品部署场景：发布流程写入版本号，这里只负责读取。
             Path versionPath = Path.of(service.getVersionFile()).normalize();
             data.put("versionFile", versionPath.toString());
             if (Files.isRegularFile(versionPath) && Files.isReadable(versionPath)) {
@@ -69,6 +70,7 @@ public class AppVersionTools {
             File directory = Path.of(service.getWorkingDirectory()).normalize().toFile();
             data.put("workingDirectory", directory.getAbsolutePath());
 
+            // git 查询通过受控命令执行器完成；git 不存在时不会抛异常给 Agent。
             OpsCommandRunner.CommandResult commit = commandRunner.run(
                     List.of("git", "rev-parse", "--short", "HEAD"), directory);
             if (commit.available()) {
@@ -93,6 +95,7 @@ public class AppVersionTools {
             data.put("gitError", "No workingDirectory configured. This is expected if the server is deployed from Gitee packages or artifacts without a git checkout.");
         }
 
+        // 这个工具会把能读取到的信息和缺失原因一起返回，方便 Agent 如实解释。
         return OpsJson.stringify(OpsToolResult.ok("getAppVersion",
                 "Collected version information from configured sources. Missing sources are reported in data.", data));
     }

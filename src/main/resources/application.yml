@@ -26,7 +26,7 @@ agent:
   system-prompt: ${AGENT_SYSTEM_PROMPT:You are a concise and practical assistant.}
   conversation:
     # 每个会话最多保留多少轮历史。一轮包含 1 条用户消息和 1 条助手回复。
-    max-message-pairs: 6
+
   terminal:
     workspace-root: .
     timeout-seconds: 5
@@ -41,6 +41,20 @@ agent:
         log-path: ./logs/app.log
         version-file: ./VERSION
         working-directory: .
+  sql-tuning:
+    default-port: 3306
+    default-limit: 50
+    max-limit: 50
+    default-long-query-time-seconds: 1
+    default-min-examined-row-limit: 100
+    default-log-output: TABLE
+    connect-timeout-seconds: 5
+    socket-timeout-seconds: 10
+    host: ${SQL_TUNING_MYSQL_HOST:}
+    port: ${SQL_TUNING_MYSQL_PORT:3306}
+    database: ${SQL_TUNING_MYSQL_DATABASE:}
+    username: ${SQL_TUNING_MYSQL_USERNAME:}
+    password: ${SQL_TUNING_MYSQL_PASSWORD:}
 
 milvus:
   host: localhost

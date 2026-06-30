@@ -1,4 +1,4 @@
-package com.test.opsagent.agent.tool.ops;
+package com.test.opsagent.agent.tool.set;
 
 import java.util.Set;
 
@@ -6,6 +6,10 @@ import com.test.opsagent.agent.runtime.AgentScene;
 import com.test.opsagent.agent.runtime.AgentToolSet;
 import com.test.opsagent.agent.tool.DateTimeTools;
 import com.test.opsagent.agent.tool.knowledge.KnowledgeSearchTools;
+import com.test.opsagent.agent.tool.ops.AppVersionTools;
+import com.test.opsagent.agent.tool.ops.LogQueryTools;
+import com.test.opsagent.agent.tool.ops.ServerStatusTools;
+import com.test.opsagent.agent.tool.ops.ServiceQueryTools;
 import org.springframework.stereotype.Component;
 
 /**

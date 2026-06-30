@@ -93,6 +93,7 @@ public class ServiceQueryTools {
         }
 
         try {
+            // 只对配置好的 healthUrl 发起 GET 请求，并设置超时，避免长时间阻塞。
             HttpRequest request = HttpRequest.newBuilder(URI.create(service.getHealthUrl()))
                     .timeout(Duration.ofSeconds(5))
                     .GET()
@@ -103,6 +104,7 @@ public class ServiceQueryTools {
             data.put("serviceName", serviceName);
             data.put("healthUrl", service.getHealthUrl());
             data.put("statusCode", response.statusCode());
+            // 响应体保留下来，方便 Agent 判断具体健康检查失败原因。
             data.put("body", response.body());
             return OpsJson.stringify(OpsToolResult.ok("checkServiceHealth",
                     response.statusCode() >= 200 && response.statusCode() < 400

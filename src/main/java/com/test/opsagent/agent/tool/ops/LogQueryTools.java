@@ -57,11 +57,13 @@ public class LogQueryTools {
     }
 
     private String tail(String serviceName, OpsQueryProperties.Service service, int requestedLines) {
+        // logPath 只从服务配置中读取，不暴露为 @Tool 参数。
         Path path = logPath(service);
         if (path == null) {
             return OpsJson.stringify(OpsToolResult.unavailable("tailServiceLog",
                     "No logPath configured for service: " + serviceName));
         }
+        // 文件不存在或不可读时返回 unavailable，让用户知道当前日志能力不可用。
         if (!Files.isRegularFile(path) || !Files.isReadable(path)) {
             return OpsJson.stringify(OpsToolResult.unavailable("tailServiceLog",
                     "Log file does not exist or is not readable: " + path));
@@ -69,6 +71,7 @@ public class LogQueryTools {
 
         int limit = clampLines(requestedLines);
         try (var stream = Files.lines(path, StandardCharsets.UTF_8)) {
+            // 使用固定大小队列保留最后 N 行，避免把整个日志文件返回给模型。
             ArrayDeque<String> buffer = new ArrayDeque<>(limit);
             stream.forEach(line -> {
                 if (buffer.size() == limit) {
@@ -95,11 +98,13 @@ public class LogQueryTools {
             return OpsJson.stringify(OpsToolResult.failed("searchServiceLog", "Keyword is required"));
         }
 
+        // logPath 只从服务配置中读取，不暴露为 @Tool 参数。
         Path path = logPath(service);
         if (path == null) {
             return OpsJson.stringify(OpsToolResult.unavailable("searchServiceLog",
                     "No logPath configured for service: " + serviceName));
         }
+        // 文件不存在或不可读时返回 unavailable，让用户知道当前日志能力不可用。
         if (!Files.isRegularFile(path) || !Files.isReadable(path)) {
             return OpsJson.stringify(OpsToolResult.unavailable("searchServiceLog",
                     "Log file does not exist or is not readable: " + path));
@@ -135,6 +140,7 @@ public class LogQueryTools {
     }
 
     private int clampLines(int requestedLines) {
+        // 返回行数受 agent.ops.max-log-lines 控制，防止提示词上下文被日志撑爆。
         int max = Math.max(properties.getMaxLogLines(), 1);
         if (requestedLines <= 0) {
             return Math.min(50, max);

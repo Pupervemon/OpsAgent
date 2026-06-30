@@ -1,5 +1,8 @@
 package com.test.opsagent.agent.workflow.sql;
 
+import lombok.Getter;
+import lombok.Setter;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -8,6 +11,8 @@ import java.util.Map;
  * <p>
  * parsed=true 表示模型返回了合法 JSON；parsed=false 时 rawOutput 会保留原始输出，analysis 中放兜底结果。
  */
+@Setter
+@Getter
 public class SqlTuningLlmAnalysisResult {
 
     private String status;
@@ -40,43 +45,4 @@ public class SqlTuningLlmAnalysisResult {
         return result;
     }
 
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public boolean isParsed() {
-        return parsed;
-    }
-
-    public void setParsed(boolean parsed) {
-        this.parsed = parsed;
-    }
-
-    public Map<String, Object> getAnalysis() {
-        return analysis;
-    }
-
-    public void setAnalysis(Map<String, Object> analysis) {
-        this.analysis = analysis;
-    }
-
-    public String getRawOutput() {
-        return rawOutput;
-    }
-
-    public void setRawOutput(String rawOutput) {
-        this.rawOutput = rawOutput;
-    }
-
-    public String getError() {
-        return error;
-    }
-
-    public void setError(String error) {
-        this.error = error;
-    }
 }

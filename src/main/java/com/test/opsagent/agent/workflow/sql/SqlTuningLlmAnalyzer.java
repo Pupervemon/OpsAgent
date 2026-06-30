@@ -10,10 +10,9 @@ import org.springframework.ai.chat.model.ChatModel;
 import org.springframework.stereotype.Component;
 
 /**
- * SQL 调优大模型分析器。
+ * SQL tuning LLM analyzer.
  * <p>
- * 该组件不使用 ReActAgent，也不使用工具调用；它只接收 Workflow 已采集好的上下文，
- * 用固定提示词调用 ChatModel，并要求模型返回结构化 JSON。
+ * This component does not use ReActAgent or tool calls. It only analyzes the context collected by the workflow.
  */
 @Component
 public class SqlTuningLlmAnalyzer {
@@ -63,51 +62,52 @@ public class SqlTuningLlmAnalyzer {
 
         String contextJson = objectMapper.writeValueAsString(payload);
         return """
-                你是 MySQL SQL 调优分析器。
+                You are a MySQL SQL tuning analyzer.
 
-                约束：
-                1. 你只能基于用户提供的 SQL、慢查询统计、EXPLAIN 原始字段、表结构和索引信息进行分析。
-                2. 不要编造不存在的表、字段、索引或执行计划。
-                3. 不要建议直接在生产环境执行 DDL。
-                4. 不要把单个 EXPLAIN 字段直接等同于最终结论，必须说明证据和不确定性。
-                5. 必须逐字段分析 EXPLAIN 中出现的关键字段。
-                6. 每个优化建议必须包含 evidence、risk、verification。
-                7. 如果证据不足，必须写入 insufficientEvidence。
-                8. 只输出 JSON，不要 Markdown，不要输出 JSON 之外的任何解释。
+                You must follow these rules:
+                1. Analyze only the provided SQL, slow query statistics, EXPLAIN facts, table schemas, and index metadata.
+                2. Do not invent tables, columns, indexes, values, EXPLAIN rows, or business facts.
+                3. Do not recommend executing DDL directly in production.
+                4. Do not treat a single EXPLAIN field as a final conclusion. Explain uncertainty and evidence.
+                5. Analyze the EXPLAIN facts field by field when they are present.
+                6. Every recommendation must include evidence, risk, and verification.
+                7. If evidence is insufficient, list it in insufficientEvidence.
+                8. Output strict JSON only. Do not output Markdown or any text outside the JSON object.
+                9. Write the JSON string values in Chinese.
 
-                请按以下 JSON 结构输出：
+                Required JSON schema:
                 {
-                  "summary": "一句话总结",
+                  "summary": "one sentence summary in Chinese",
                   "fieldAnalysis": [
                     {
-                      "field": "字段名，例如 type/key/rows/Extra",
-                      "observed": "观察到的值",
-                      "analysis": "解释该字段含义和可能影响，不要过度下结论",
+                      "field": "EXPLAIN field name, for example type/key/rows/Extra",
+                      "observed": "observed value",
+                      "analysis": "meaning and possible impact, with uncertainty when needed",
                       "confidence": "low|medium|high"
                     }
                   ],
                   "possibleCauses": [
                     {
-                      "cause": "可能原因",
-                      "evidence": ["证据1", "证据2"],
+                      "cause": "possible cause in Chinese",
+                      "evidence": ["evidence item 1", "evidence item 2"],
                       "confidence": "low|medium|high"
                     }
                   ],
                   "recommendations": [
                     {
                       "type": "SQL_REWRITE|INDEX|STATISTICS|BUSINESS|OBSERVATION",
-                      "recommendation": "建议内容",
-                      "evidence": ["证据1", "证据2"],
-                      "risk": "风险",
-                      "verification": "验证方式"
+                      "recommendation": "recommendation in Chinese",
+                      "evidence": ["evidence item 1", "evidence item 2"],
+                      "risk": "risk in Chinese",
+                      "verification": "verification method in Chinese"
                     }
                   ],
-                  "risks": ["风险1", "风险2"],
-                  "verificationPlan": ["步骤1", "步骤2"],
-                  "insufficientEvidence": ["缺少的信息1"]
+                  "risks": ["risk item in Chinese"],
+                  "verificationPlan": ["verification step in Chinese"],
+                  "insufficientEvidence": ["missing evidence in Chinese"]
                 }
 
-                输入上下文 JSON：
+                Input context JSON:
                 %s
                 """.formatted(contextJson);
     }
